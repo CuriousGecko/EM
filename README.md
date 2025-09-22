@@ -45,7 +45,7 @@ def get_user_list(
         return JsonResponse({'users': [data]})
 ```
 Также для удобной проверки доступа к конкретному объекту реализована утилита
-**check_object_access**. Выбрасываемые ей исключения **ObjectAccessDeniedError**
+**check_object_access**. Выбрасываемые ею исключения **ObjectAccessDeniedError**
 будут перехвачены **middleware** и возвращены в качестве ответа **403**.
 
 ## Примеры запросов ##
