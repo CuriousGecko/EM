@@ -1,7 +1,6 @@
 import uuid
 
 from access.api.constants import Action
-from access.api.models import AccessRule
 from access.api.permissions import check_access, check_object_access
 from django.http import HttpRequest, JsonResponse
 from django.shortcuts import get_object_or_404
@@ -18,10 +17,7 @@ from utils.utils import parse_json_body
     get_rules_for='user',
     require_auth=False
 )
-def register_user(
-        request: HttpRequest,
-        access_rules: AccessRule | None
-) -> JsonResponse:
+def register_user(request: HttpRequest) -> JsonResponse:
     """
     Регистрация нового пользователя в системе.
 
@@ -30,7 +26,6 @@ def register_user(
 
     Args:
         request: HTTP запрос с данными регистрации
-        access_rules: Правила доступа для ресурса 'user', полученные из роли
 
     Returns:
         JsonResponse:
@@ -39,16 +34,15 @@ def register_user(
             - 403: Регистрация отключена (нет прав can_create)
 
     Example:
-        POST /api/register/
+        POST /api/users/register/
         {
             "email": "user@example.com",
             "password": "supersecurepassword123",
-            "password_confirm": "supersecurepassword123",
             "first_name": "Иван",
             "last_name": "Иванов"
         }
     """
-    if not access_rules.can_create:
+    if not request.access_rules.can_create:
         return JsonResponse(
             {'errors': 'Регистрация в данный момент недоступна.'},
             status=403
@@ -75,12 +69,9 @@ def register_user(
     allowed_methods=['GET'],
     get_rules_for='user',
 )
-def get_user_list(
-        request: HttpRequest,
-        access_rules: AccessRule | None
-) -> JsonResponse:
+def get_user_list(request: HttpRequest) -> JsonResponse:
     """Выдаст список всех пользователей или вернет текущего."""
-    if access_rules.can_read_all:
+    if request.access_rules.can_read_all:
         users = User.objects.filter(is_active=True)
         data = UserSerializer(users, many=True).data
         return JsonResponse({'users': data})
@@ -94,14 +85,12 @@ def get_user_list(
     allowed_methods=['GET'],
     get_rules_for='user',
 )
-def get_user_detail(
-        request: HttpRequest,
-        user_id: uuid.UUID,
-        access_rules: AccessRule | None
-) -> JsonResponse:
+def get_user_detail(request: HttpRequest, user_id: uuid.UUID) -> JsonResponse:
     """Выдаст информацию о пользователе."""
     user_to_read = get_object_or_404(User, id=user_id, is_active=True)
-    check_object_access(request.user, user_to_read, access_rules, Action.READ)
+    check_object_access(
+        request.user, user_to_read, request.access_rules, Action.READ
+    )
     data = UserSerializer(user_to_read).data
     return JsonResponse({'user': data})
 
@@ -111,15 +100,11 @@ def get_user_detail(
     allowed_methods=['PUT'],
     get_rules_for='user',
 )
-def update_user(
-        request: HttpRequest,
-        user_id: uuid.UUID,
-        access_rules: AccessRule | None
-) -> JsonResponse:
+def update_user(request: HttpRequest, user_id: uuid.UUID) -> JsonResponse:
     """Обновит информацию о пользователе."""
     user_to_update = get_object_or_404(User, id=user_id, is_active=True)
     check_object_access(
-        request.user, user_to_update, access_rules, Action.UPDATE
+        request.user, user_to_update, request.access_rules, Action.UPDATE
     )
 
     payload = parse_json_body(request)
@@ -144,11 +129,7 @@ def update_user(
     allowed_methods=['DELETE'],
     get_rules_for='user',
 )
-def delete_user(
-        request: HttpRequest,
-        user_id: uuid.UUID,
-        access_rules: AccessRule | None
-) -> JsonResponse:
+def delete_user(request: HttpRequest, user_id: uuid.UUID) -> JsonResponse:
     """
     Удалит пользователя (мягкое удаление).
 
@@ -159,7 +140,6 @@ def delete_user(
     Args:
         request: HTTP запрос
         user_id: UUID пользователя для удаления
-        access_rules: Правила доступа для ресурса 'user'
 
     Returns:
         JsonResponse: Сообщение об успешном удалении (201) или ошибка
@@ -170,7 +150,7 @@ def delete_user(
     """
     user_to_delete = get_object_or_404(User, id=user_id, is_active=True)
     check_object_access(
-        request.user, user_to_delete, access_rules, Action.DELETE
+        request.user, user_to_delete, request.access_rules, Action.DELETE
     )
     user_to_delete.soft_delete()
     return JsonResponse(

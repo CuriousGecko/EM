@@ -45,28 +45,20 @@ def check_access(
                     status=403
                 )
 
-            if not get_rules_for:
-                return view_func(
-                    request,
-                    *args,
-                    access_rules=None,
-                    **kwargs
-                )
+            if get_rules_for:
+                access_rules = get_access_rules(user, get_rules_for)
+                if not access_rules:
+                    return JsonResponse(
+                        {'error': f'Для роли ({user.role}) не определены '
+                                  f'правила доступа к ресурсу '
+                                  f'({get_rules_for}).'},
+                        status=403
+                    )
+                request.access_rules = access_rules
+            else:
+                request.access_rules = None
 
-            access_rules = get_access_rules(user, get_rules_for)
-            if not access_rules:
-                return JsonResponse(
-                    {'error': f'Для роли ({user.role}) не определены правила '
-                              f'доступа к ресурсу ({get_rules_for}).'},
-                    status=403
-                )
-
-            return view_func(
-                request,
-                *args,
-                access_rules=access_rules,
-                **kwargs
-            )
+            return view_func(request, *args, **kwargs)
 
         return wrapper
     return decorator

@@ -16,7 +16,7 @@
     * Вернет **405**, если метод не разрешен.
     * **401**, если не удалось определить пользователя (проверка опциональна).
     * **403**, если не найдена запись в таблице правил для роли пользователя 
-      (в ином случае она возвращается в функцию как access_rules). Проверка 
+      (в ином случае она кладется в request.access_rules). Проверка 
       опциональна. →
 * **view**
 
@@ -28,14 +28,11 @@
     allowed_methods=['GET'],          # Разрешен только GET метод
     get_rules_for='user',             # Получаем правила для ресурса 'user'
 )
-def get_user_list(
-        request: HttpRequest,
-        access_rules: AccessRule | None
-) -> JsonResponse:
+def get_user_list(request: HttpRequest) -> JsonResponse:
     """Выдаст список всех пользователей или вернет текущего."""
     
     # Проверяем право на чтение всех пользователей
-    if access_rules.can_read_all:
+    if request.access_rules.can_read_all:
         users = User.objects.filter(is_active=True)
         data = UserSerializer(users, many=True).data
         return JsonResponse({'users': data})

@@ -1,14 +1,12 @@
-from django.http import JsonResponse
-
-from access.api.models import AccessRule
 from access.api.permissions import check_access
+from django.http import JsonResponse
 
 
 @check_access(
     allowed_methods=['GET'],
     require_auth=False
 )
-def get_products(request, access_rules: AccessRule):
+def get_products(request):
     """
     Mock API для получения списка товаров.
     Публичный endpoint - не требует аутентификации.
@@ -42,7 +40,7 @@ def get_products(request, access_rules: AccessRule):
     get_rules_for='order',
     require_auth=True
 )
-def get_orders(request, access_rules: AccessRule):
+def get_orders(request):
     """
     Mock API для получения заказов.
     Требует аутентификацию и права на чтение заказов (своих или любых).
@@ -67,10 +65,10 @@ def get_orders(request, access_rules: AccessRule):
         }
     ]
 
-    if access_rules.can_read_all:
+    if request.access_rules.can_read_all:
         return JsonResponse(mock_orders, safe=False)
 
-    if access_rules.can_read_own:
+    if request.access_rules.can_read_own:
         user_orders = [
             order for order in mock_orders if
             order['owner_id'] == str(request.user.id)
